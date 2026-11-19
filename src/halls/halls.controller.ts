@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+
 import {
   ApiTags,
   ApiCreatedResponse,
@@ -17,6 +18,7 @@ import {
   ApiNotFoundResponse,
   ApiConflictResponse,
 } from '@nestjs/swagger';
+
 import { HallsService } from './halls.service';
 import { CreateHallDto } from './dto/create-hall.dto';
 import {
@@ -39,13 +41,13 @@ export class HallsController {
   @ApiConflictResponse({
     description: 'Зал із такою назвою вже існує',
   })
-  create(@Body() dto: CreateHallDto): Hall {
+  create(@Body() dto: CreateHallDto): Promise<Hall> {
     return this.hallsService.create(dto);
   }
 
   @Get()
   @ApiOkResponse({ type: [Hall] })
-  findAll(): Hall[] {
+  findAll(): Promise<Hall[]> {
     return this.hallsService.findAll();
   }
 
@@ -54,7 +56,9 @@ export class HallsController {
   @ApiNotFoundResponse({
     description: 'Зал не знайдено',
   })
-  findOne(@Param('id') id: string): HallWithSeats {
+  findOne(
+    @Param('id') id: string,
+  ): Promise<HallWithSeats> {
     return this.hallsService.findOneWithSeats(id);
   }
 
@@ -69,7 +73,7 @@ export class HallsController {
   @ApiConflictResponse({
     description: 'Зал використовується в сеансах',
   })
-  remove(@Param('id') id: string): void {
-    this.hallsService.remove(id);
+  remove(@Param('id') id: string): Promise<void> {
+    return this.hallsService.remove(id);
   }
 }

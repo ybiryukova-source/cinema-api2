@@ -1,17 +1,21 @@
+
 import {
   Injectable,
   BadRequestException,
   NotFoundException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { FilmsService } from '../films/films.service';
 import { HallsService } from '../halls/halls.service';
 
 import { CreateShowingDto } from './dto/create-showing.dto';
-import { FindShowingsQueryDto } from './dto/find-showings-query.dto';
+import {
+  FindShowingsQueryDto,
+  ShowingSort,
+} from './dto/find-showings-query.dto';
+import { ShowingsPageDto } from './dto/showings-page.dto';
 import {
   Showing,
   ShowingDetails,
@@ -19,28 +23,37 @@ import {
 
 @Injectable()
 export class ShowingsService {
-  private showings: Showing[] = [];
-
   constructor(
-    @Inject(forwardRef(() => FilmsService))
+    @InjectRepository(Showing)
+    private readonly showingsRepository: Repository<Showing>,
     private readonly filmsService: FilmsService,
-
-    @Inject(forwardRef(() => HallsService))
     private readonly hallsService: HallsService,
   ) {}
 
-  create(dto: CreateShowingDto): Showing {
-    try {
-      this.filmsService.findOne(dto.filmId);
-    } catch {
+  async create(dto: CreateShowingDto): Promise<Showing> {
+    const filmExists = await this.filmsService
+      .findOne(dto.filmId)
+      .then(() => true)
+      .catch((error: unknown) => {
+        if (error instanceof NotFoundException) return false;
+        throw error;
+      });
+
+    if (!filmExists) {
       throw new BadRequestException(
         `Фільм з id ${dto.filmId} не знайдено`,
       );
     }
 
-    try {
-      this.hallsService.findOne(dto.hallId);
-    } catch {
+    const hallExists = await this.hallsService
+      .findOne(dto.hallId)
+      .then(() => true)
+      .catch((error: unknown) => {
+        if (error instanceof NotFoundException) return false;
+        throw error;
+      });
+
+    if (!hallExists) {
       throw new BadRequestException(
         `Зал з id ${dto.hallId} не знайдено`,
       );
@@ -57,51 +70,94 @@ export class ShowingsService {
       );
     }
 
-    const showing: Showing = {
-      id: randomUUID(),
+    const showing = this.showingsRepository.create({
       filmId: dto.filmId,
       hallId: dto.hallId,
-      startsAt: startsAt.toISOString(),
+      startsAt,
       price: dto.price,
-    };
+    });
 
-    this.showings.push(showing);
-
-    return showing;
+    return this.showingsRepository.save(showing);
   }
 
-  findAll(query: FindShowingsQueryDto): ShowingDetails[] {
-    let result = [...this.showings];
+  async findAll(
+    query: FindShowingsQueryDto,
+  ): Promise<ShowingsPageDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const sort = query.sort ?? ShowingSort.ASC;
+
+    if (!Number.isInteger(page) || page < 1) {
+      throw new BadRequestException('Некоректний параметр page');
+    }
+
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100
+    ) {
+      throw new BadRequestException('Некоректний параметр limit');
+    }
+
+    if (sort !== ShowingSort.ASC && sort !== ShowingSort.DESC) {
+      throw new BadRequestException('Некоректний параметр sort');
+    }
+
+    const qb = this.showingsRepository
+      .createQueryBuilder('showing')
+      .innerJoinAndSelect('showing.film', 'film')
+      .innerJoinAndSelect('showing.hall', 'hall');
 
     if (query.filmId) {
-      result = result.filter(
-        (showing) => showing.filmId === query.filmId,
-      );
+      qb.andWhere('showing.filmId = :filmId', {
+        filmId: query.filmId,
+      });
     }
 
     if (query.date) {
-      result = result.filter(
-        (showing) =>
-          showing.startsAt.slice(0, 10) === query.date,
+      const date = query.date;
+      const parsedDate = new Date(`${date}T00:00:00.000Z`);
+
+      if (
+        !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+        Number.isNaN(parsedDate.getTime()) ||
+        parsedDate.toISOString().slice(0, 10) !== date
+      ) {
+        throw new BadRequestException(
+          'date має бути коректною датою YYYY-MM-DD',
+        );
+      }
+
+      const nextDate = new Date(
+        parsedDate.getTime() + 24 * 60 * 60 * 1000,
       );
+
+      qb.andWhere('showing.startsAt >= :startDate', {
+        startDate: parsedDate,
+      }).andWhere('showing.startsAt < :endDate', {
+        endDate: nextDate,
+      });
     }
 
-    result.sort(
-      (a, b) =>
-        new Date(a.startsAt).getTime() -
-          new Date(b.startsAt).getTime() ||
-        a.id.localeCompare(b.id),
-    );
+    const direction = sort === ShowingSort.DESC ? 'DESC' : 'ASC';
 
-    return result.map((showing) =>
-      this.toDetails(showing),
-    );
+    qb.orderBy('showing.startsAt', direction)
+      .addOrderBy('showing.id', direction)
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [showings, total] = await qb.getManyAndCount();
+
+    return {
+      items: showings.map((showing) => this.toDetails(showing)),
+      total,
+      page,
+      limit,
+    };
   }
 
-  findOne(id: string): Showing {
-    const showing = this.showings.find(
-      (showing) => showing.id === id,
-    );
+  async findOne(id: string): Promise<Showing> {
+    const showing = await this.showingsRepository.findOneBy({ id });
 
     if (!showing) {
       throw new NotFoundException(
@@ -112,31 +168,38 @@ export class ShowingsService {
     return showing;
   }
 
-  findOneDetails(id: string): ShowingDetails {
-    return this.toDetails(this.findOne(id));
+  async findOneDetails(id: string): Promise<ShowingDetails> {
+    const showing = await this.showingsRepository.findOne({
+      where: { id },
+      relations: {
+        film: true,
+        hall: true,
+      },
+    });
+
+    if (!showing) {
+      throw new NotFoundException(
+        `Сеанс з id ${id} не знайдено`,
+      );
+    }
+
+    return this.toDetails(showing);
   }
 
-  hasFilm(filmId: string): boolean {
-    return this.showings.some(
-      (showing) => showing.filmId === filmId,
-    );
+  async hasFilm(filmId: string): Promise<boolean> {
+    return this.showingsRepository.existsBy({ filmId });
   }
 
-  hasHall(hallId: string): boolean {
-    return this.showings.some(
-      (showing) => showing.hallId === hallId,
-    );
+  async hasHall(hallId: string): Promise<boolean> {
+    return this.showingsRepository.existsBy({ hallId });
   }
 
   private toDetails(showing: Showing): ShowingDetails {
-    const film = this.filmsService.findOne(showing.filmId);
-    const hall = this.hallsService.findOne(showing.hallId);
-
     return {
       id: showing.id,
-      filmTitle: film.title,
-      hallName: hall.name,
-      startsAt: showing.startsAt,
+      filmTitle: showing.film.title,
+      hallName: showing.hall.name,
+      startsAt: showing.startsAt.toISOString(),
       price: showing.price,
     };
   }

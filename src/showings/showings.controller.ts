@@ -5,7 +5,9 @@ import {
   Body,
   Param,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
+
 import {
   ApiTags,
   ApiCreatedResponse,
@@ -13,9 +15,12 @@ import {
   ApiBadRequestResponse,
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
+
 import { ShowingsService } from './showings.service';
 import { CreateShowingDto } from './dto/create-showing.dto';
 import { FindShowingsQueryDto } from './dto/find-showings-query.dto';
+import { ShowingsPageDto } from './dto/showings-page.dto';
+
 import {
   Showing,
   ShowingDetails,
@@ -33,18 +38,23 @@ export class ShowingsController {
   @ApiBadRequestResponse({
     description: 'Некоректні дані або неіснуючий фільм чи зал',
   })
-  create(@Body() dto: CreateShowingDto): Showing {
+  create(
+    @Body() dto: CreateShowingDto,
+  ): Promise<Showing> {
     return this.showingsService.create(dto);
   }
 
   @Get()
-  @ApiOkResponse({ type: [ShowingDetails] })
+  @ApiOkResponse({
+    type: ShowingsPageDto,
+    description: 'Список сеансів із пагінацією',
+  })
   @ApiBadRequestResponse({
-    description: 'Некоректний формат date',
+    description: 'Некоректні параметри фільтрації або пагінації',
   })
   findAll(
     @Query() query: FindShowingsQueryDto,
-  ): ShowingDetails[] {
+  ): Promise<ShowingsPageDto> {
     return this.showingsService.findAll(query);
   }
 
@@ -53,7 +63,9 @@ export class ShowingsController {
   @ApiNotFoundResponse({
     description: 'Сеанс не знайдено',
   })
-  findOne(@Param('id') id: string): ShowingDetails {
+  findOne(
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<ShowingDetails> {
     return this.showingsService.findOneDetails(id);
   }
 }

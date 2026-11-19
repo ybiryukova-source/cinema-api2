@@ -1,4 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsOptional,
   IsString,
@@ -7,10 +8,19 @@ import {
   Validate,
   ValidatorConstraint,
   ValidatorConstraintInterface,
+  IsInt,
+  Min,
+  Max,
+  IsEnum,
 } from 'class-validator';
 
-@ValidatorConstraint({ name: 'isValidCalendarDate', async: false })
-class IsValidCalendarDate implements ValidatorConstraintInterface {
+@ValidatorConstraint({
+  name: 'isValidCalendarDate',
+  async: false,
+})
+class IsValidCalendarDate
+  implements ValidatorConstraintInterface
+{
   validate(value: unknown): boolean {
     if (typeof value !== 'string') {
       return false;
@@ -33,6 +43,11 @@ class IsValidCalendarDate implements ValidatorConstraintInterface {
   }
 }
 
+export enum ShowingSort {
+  ASC = 'asc',
+  DESC = 'desc',
+}
+
 export class FindShowingsQueryDto {
   @ApiPropertyOptional({
     description: 'ID фільму',
@@ -53,4 +68,39 @@ export class FindShowingsQueryDto {
   })
   @Validate(IsValidCalendarDate)
   date?: string;
+
+  @ApiPropertyOptional({
+    example: 1,
+    default: 1,
+    minimum: 1,
+    description: 'Номер сторінки',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page: number = 1;
+
+  @ApiPropertyOptional({
+    example: 20,
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+    description: 'Кількість сеансів на сторінці',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit: number = 20;
+
+  @ApiPropertyOptional({
+    enum: ShowingSort,
+    default: ShowingSort.ASC,
+    description: 'Сортування за часом початку сеансу',
+  })
+  @IsOptional()
+  @IsEnum(ShowingSort)
+  sort: ShowingSort = ShowingSort.ASC;
 }

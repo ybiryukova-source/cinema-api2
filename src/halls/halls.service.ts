@@ -2,27 +2,24 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
+
 import { CreateHallDto } from './dto/create-hall.dto';
 import { Hall, HallWithSeats, Seat } from './entities/hall.entity';
-import { ShowingsService } from '../showings/showings.service';
 
 @Injectable()
 export class HallsService {
-  private halls: Hall[] = [];
-
   constructor(
-    @Inject(forwardRef(() => ShowingsService))
-    private readonly showingsService: ShowingsService,
+    @InjectRepository(Hall)
+    private readonly hallsRepository: Repository<Hall>,
   ) {}
 
-  create(dto: CreateHallDto): Hall {
-    const exists = this.halls.some(
-      (hall) => hall.name === dto.name,
-    );
+  async create(dto: CreateHallDto): Promise<Hall> {
+    const exists = await this.hallsRepository.existsBy({
+      name: dto.name,
+    });
 
     if (exists) {
       throw new ConflictException(
@@ -30,21 +27,30 @@ export class HallsService {
       );
     }
 
-    const hall: Hall = {
-      id: randomUUID(),
-      ...dto,
-    };
+    try {
+      const hall = this.hallsRepository.create(dto);
+      return await this.hallsRepository.save(hall);
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        const driverError = error.driverError as { code?: string };
 
-    this.halls.push(hall);
-    return hall;
+        if (driverError.code === '23505') {
+          throw new ConflictException(
+            `Зал з назвою "${dto.name}" вже існує`,
+          );
+        }
+      }
+
+      throw error;
+    }
   }
 
-  findAll(): Hall[] {
-    return this.halls;
+  async findAll(): Promise<Hall[]> {
+    return this.hallsRepository.find();
   }
 
-  findOne(id: string): Hall {
-    const hall = this.halls.find((hall) => hall.id === id);
+  async findOne(id: string): Promise<Hall> {
+    const hall = await this.hallsRepository.findOneBy({ id });
 
     if (!hall) {
       throw new NotFoundException(
@@ -67,8 +73,8 @@ export class HallsService {
     return seats;
   }
 
-  findOneWithSeats(id: string): HallWithSeats {
-    const hall = this.findOne(id);
+  async findOneWithSeats(id: string): Promise<HallWithSeats> {
+    const hall = await this.findOne(id);
 
     return {
       ...hall,
@@ -76,17 +82,35 @@ export class HallsService {
     };
   }
 
-  remove(id: string): void {
-    this.findOne(id);
+  async remove(id: string): Promise<void> {
+    const hall = await this.findOne(id);
 
-    if (this.showingsService.hasHall(id)) {
+    const hasShowings = await this.hallsRepository
+      .createQueryBuilder('hall')
+      .innerJoin('hall.showings', 'showing')
+      .where('hall.id = :id', { id })
+      .getExists();
+
+    if (hasShowings) {
       throw new ConflictException(
         'Неможливо видалити зал, оскільки для нього існують сеанси',
       );
     }
 
-    this.halls = this.halls.filter(
-      (hall) => hall.id !== id,
-    );
+    try {
+      await this.hallsRepository.remove(hall);
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        const driverError = error.driverError as { code?: string };
+
+        if (driverError.code === '23503') {
+          throw new ConflictException(
+            'Неможливо видалити зал, оскільки для нього існують сеанси',
+          );
+        }
+      }
+
+      throw error;
+    }
   }
 }

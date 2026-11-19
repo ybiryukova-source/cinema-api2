@@ -9,6 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+
 import {
   ApiTags,
   ApiCreatedResponse,
@@ -18,6 +19,7 @@ import {
   ApiNotFoundResponse,
   ApiConflictResponse,
 } from '@nestjs/swagger';
+
 import { FilmsService } from './films.service';
 import { CreateFilmDto } from './dto/create-film.dto';
 import { UpdateFilmDto } from './dto/update-film.dto';
@@ -35,13 +37,13 @@ export class FilmsController {
   @ApiBadRequestResponse({
     description: 'Некоректні дані фільму',
   })
-  create(@Body() dto: CreateFilmDto): Film {
+  create(@Body() dto: CreateFilmDto): Promise<Film> {
     return this.filmsService.create(dto);
   }
 
   @Get()
   @ApiOkResponse({ type: [Film] })
-  findAll(): Film[] {
+  findAll(): Promise<Film[]> {
     return this.filmsService.findAll();
   }
 
@@ -50,7 +52,7 @@ export class FilmsController {
   @ApiNotFoundResponse({
     description: 'Фільм не знайдено',
   })
-  findOne(@Param('id') id: string): Film {
+  findOne(@Param('id') id: string): Promise<Film> {
     return this.filmsService.findOne(id);
   }
 
@@ -65,7 +67,7 @@ export class FilmsController {
   update(
     @Param('id') id: string,
     @Body() dto: UpdateFilmDto,
-  ): Film {
+  ): Promise<Film> {
     return this.filmsService.update(id, dto);
   }
 
@@ -80,7 +82,7 @@ export class FilmsController {
   @ApiConflictResponse({
     description: 'Фільм використовується в сеансах',
   })
-  remove(@Param('id') id: string): void {
-    this.filmsService.remove(id);
+  remove(@Param('id') id: string): Promise<void> {
+    return this.filmsService.remove(id);
   }
 }

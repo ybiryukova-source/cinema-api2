@@ -8,6 +8,7 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -17,6 +18,7 @@ import {
   ApiOkResponse,
   ApiTags,
 } from '@nestjs/swagger';
+
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { Booking } from './entities/booking.entity';
@@ -30,7 +32,7 @@ export class BookingsController {
 
   @Get()
   @ApiOkResponse({ type: [Booking] })
-  findAll(): Booking[] {
+  findAll(): Promise<Booking[]> {
     return this.bookingsService.findAll();
   }
 
@@ -40,8 +42,8 @@ export class BookingsController {
   @ApiNotFoundResponse({
     description: 'Бронювання не знайдено',
   })
-  remove(@Param('id') id: string): void {
-    this.bookingsService.remove(id);
+  remove(@Param('id') id: string): Promise<void> {
+    return this.bookingsService.remove(id);
   }
 }
 
@@ -66,7 +68,7 @@ export class ShowingBookingsController {
   create(
     @Param('id') showingId: string,
     @Body() dto: CreateBookingDto,
-  ): Booking {
+  ): Promise<Booking> {
     return this.bookingsService.create(showingId, dto);
   }
 
@@ -77,7 +79,7 @@ export class ShowingBookingsController {
   })
   findByShowing(
     @Param('id') showingId: string,
-  ): Booking[] {
+  ): Promise<Booking[]> {
     return this.bookingsService.findByShowing(showingId);
   }
 
@@ -99,7 +101,11 @@ export class ShowingBookingsController {
   @ApiNotFoundResponse({
     description: 'Сеанс не знайдено',
   })
-  getSeats(@Param('id') showingId: string) {
+  getSeats(
+    @Param('id') showingId: string,
+  ): Promise<
+    { row: number; seat: number; isBooked: boolean }[]
+  > {
     return this.bookingsService.getShowingSeats(showingId);
   }
 }

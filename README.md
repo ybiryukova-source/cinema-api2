@@ -1,91 +1,96 @@
 # Cinema API
-Серверна частина застосунку для керування кінотеатром.
-
-Проєкт розроблено на NestJS та TypeScript у межах домашнього завдання №1.
+REST API для керування кінотеатром на NestJS, TypeScript, PostgreSQL та TypeORM.
+Домашнє завдання №2.
 
 ## Технології
-- NestJS
-- TypeScript
-- class-validator
-- class-transformer
+- NestJS, TypeScript
+- PostgreSQL, TypeORM
+- Docker Compose
 - Swagger
+- class-validator, class-transformer
 
 ## Функціональність
-- Створення, перегляд, редагування та видалення фільмів.
+- CRUD для фільмів.
 - Створення, перегляд і видалення залів.
-- Автоматичне формування місць у залі.
-- Створення сеансів.
-- Фільтрація сеансів за фільмом і датою.
-- Перегляд вільних і зайнятих місць.
-- Бронювання одного або кількох місць.
-- Скасування бронювань.
-- Перевірка вхідних даних.
+- Створення та перегляд сеансів.
+- Фільтрація, пагінація та сортування сеансів.
+- Бронювання та скасування бронювань.
+- Захист від подвійного бронювання.
+- Транзакції та валідація даних.
+- Глобальна обробка помилок.
 
-## Встановлення
+## Встановлення та запуск
+Встановити залежності:
+
 ```bash
 npm install
 ```
 
-## Запуск у режимі розробки
+Створити `.env` на основі `.env.example`:
+
+```env
+PORT=3000
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=cinema
+POSTGRES_PASSWORD=cinema_dev_password
+POSTGRES_DB=cinema
+```
+
+Запустити PostgreSQL:
+
+```bash
+docker compose up -d
+```
+
+Виконати міграції:
+
+```bash
+npm run migration:run
+```
+
+Заповнити базу тестовими даними:
+
+```bash
+npm run seed
+```
+
+Запустити сервер:
+
 ```bash
 npm run start:dev
 ```
 
-Сервер працює за адресою:
+## API
+Swagger: http://localhost:3000/docs
 
-http://localhost:3000
+Основні маршрути:
 
-## Змінні середовища
-Приклад файлу `.env`:
+- `/films` — керування фільмами.
+- `/halls` — керування залами.
+- `/showings` — сеанси, фільтрація та пагінація.
+- `/showings/:id/bookings` — бронювання місць.
+- `/showings/:id/seats` — місця сеансу.
+- `/bookings` — перегляд і скасування бронювань.
 
-```env
-PORT=3000
+Приклад пагінації:
+
+```http
+GET /showings?page=1&limit=2&sort=asc
 ```
 
-Зразок конфігурації знаходиться у файлі `.env.example`.
+## База даних
+PostgreSQL містить 5 таблиць:
 
-Для запуску на стандартному порту файл `.env` не обов'язковий.
+- `films`
+- `halls`
+- `showings`
+- `bookings`
+- `booking_seats`
 
-## Документація API
-Swagger доступний за адресою:
+Міграції знаходяться в `src/migrations`.
 
-http://localhost:3000/docs
-
-### Films
-- POST /films
-- GET /films
-- GET /films/:id
-- PATCH /films/:id
-- DELETE /films/:id
-
-### Halls
-- POST /halls
-- GET /halls
-- GET /halls/:id
-- DELETE /halls/:id
-
-### Showings
-- POST /showings
-- GET /showings
-- GET /showings/:id
-- GET /showings/:id/seats
-
-### Bookings
-- GET /bookings
-- POST /showings/:id/bookings
-- GET /showings/:id/bookings
-- DELETE /bookings/:id
+Seed знаходиться в `src/seed.ts` і підтримує повторний запуск без дублювання тестових даних.
 
 ## Перевірка API
-У корені проєкту знаходиться файл `requests.http`.
-
-Для виконання HTTP-запитів використовується розширення REST Client у VS Code.
-
-Файл містить приклади успішних запитів і перевірок помилок.
-
-## Зберігання даних
-База даних не використовується.
-
-Дані зберігаються в приватних масивах сервісів і зникають після перезапуску сервера.
-
-Ідентифікатори створюються за допомогою `randomUUID()` із модуля `node:crypto`.
+Приклади запитів і помилок 400, 404 та 409 містяться у файлі `requests.http`.

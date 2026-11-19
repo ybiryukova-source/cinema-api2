@@ -2,40 +2,33 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
-  Inject,
-  forwardRef,
 } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, QueryFailedError } from 'typeorm';
+
 import { CreateFilmDto } from './dto/create-film.dto';
 import { UpdateFilmDto } from './dto/update-film.dto';
 import { Film } from './entities/film.entity';
-import { ShowingsService } from '../showings/showings.service';
+import { Showing } from '../showings/entities/showing.entity';
 
 @Injectable()
 export class FilmsService {
-  private films: Film[] = [];
-
   constructor(
-    @Inject(forwardRef(() => ShowingsService))
-    private readonly showingsService: ShowingsService,
+    @InjectRepository(Film)
+    private readonly filmsRepository: Repository<Film>,
   ) {}
 
-  create(dto: CreateFilmDto): Film {
-    const film: Film = {
-      id: randomUUID(),
-      ...dto,
-    };
-
-    this.films.push(film);
-    return film;
+  async create(dto: CreateFilmDto): Promise<Film> {
+    const film = this.filmsRepository.create(dto);
+    return this.filmsRepository.save(film);
   }
 
-  findAll(): Film[] {
-    return this.films;
+  async findAll(): Promise<Film[]> {
+    return this.filmsRepository.find();
   }
 
-  findOne(id: string): Film {
-    const film = this.films.find((film) => film.id === id);
+  async findOne(id: string): Promise<Film> {
+    const film = await this.filmsRepository.findOneBy({ id });
 
     if (!film) {
       throw new NotFoundException(
@@ -46,25 +39,45 @@ export class FilmsService {
     return film;
   }
 
-  update(id: string, dto: UpdateFilmDto): Film {
-    const film = this.findOne(id);
+  async update(id: string, dto: UpdateFilmDto): Promise<Film> {
+    const film = await this.findOne(id);
 
     Object.assign(film, dto);
 
-    return film;
+    return this.filmsRepository.save(film);
   }
 
-  remove(id: string): void {
-    this.findOne(id);
+  async remove(id: string): Promise<void> {
+    const film = await this.findOne(id);
 
-    if (this.showingsService.hasFilm(id)) {
+    const hasShowings = await this.filmsRepository
+      .createQueryBuilder('film')
+      .innerJoin(Showing, 'showing', 'showing.filmId = film.id')
+      .where('film.id = :id', { id })
+      .getExists();
+
+    if (hasShowings) {
       throw new ConflictException(
         'Неможливо видалити фільм, оскільки для нього існують сеанси',
       );
     }
 
-    this.films = this.films.filter(
-      (film) => film.id !== id,
-    );
+    try {
+      await this.filmsRepository.remove(film);
+    } catch (error) {
+      if (error instanceof QueryFailedError) {
+        const driverError = error.driverError as {
+          code?: string;
+        };
+
+        if (driverError.code === '23503') {
+          throw new ConflictException(
+            'Неможливо видалити фільм, оскільки для нього існують сеанси',
+          );
+        }
+      }
+
+      throw error;
+    }
   }
 }
