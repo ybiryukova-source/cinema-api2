@@ -8,7 +8,10 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+<<<<<<< HEAD
   ParseUUIDPipe,
+=======
+>>>>>>> origin/main
 } from '@nestjs/common';
 
 import {
@@ -50,6 +53,7 @@ export class FilmsController {
 
   @Get(':id')
   @ApiOkResponse({ type: Film })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID фільму',
   })
@@ -59,19 +63,33 @@ export class FilmsController {
   findOne(
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<Film> {
+=======
+  @ApiNotFoundResponse({
+    description: 'Фільм не знайдено',
+  })
+  findOne(@Param('id') id: string): Promise<Film> {
+>>>>>>> origin/main
     return this.filmsService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOkResponse({ type: Film })
   @ApiBadRequestResponse({
+<<<<<<< HEAD
     description: 'Некоректний UUID або дані для оновлення',
+=======
+    description: 'Некоректні дані для оновлення',
+>>>>>>> origin/main
   })
   @ApiNotFoundResponse({
     description: 'Фільм не знайдено',
   })
   update(
+<<<<<<< HEAD
     @Param('id', new ParseUUIDPipe()) id: string,
+=======
+    @Param('id') id: string,
+>>>>>>> origin/main
     @Body() dto: UpdateFilmDto,
   ): Promise<Film> {
     return this.filmsService.update(id, dto);
@@ -82,18 +100,25 @@ export class FilmsController {
   @ApiNoContentResponse({
     description: 'Фільм успішно видалено',
   })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID фільму',
   })
+=======
+>>>>>>> origin/main
   @ApiNotFoundResponse({
     description: 'Фільм не знайдено',
   })
   @ApiConflictResponse({
     description: 'Фільм використовується в сеансах',
   })
+<<<<<<< HEAD
   remove(
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
+=======
+  remove(@Param('id') id: string): Promise<void> {
+>>>>>>> origin/main
     return this.filmsService.remove(id);
   }
 }

@@ -60,9 +60,12 @@ export class ShowingsController {
 
   @Get(':id')
   @ApiOkResponse({ type: ShowingDetails })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID сеансу',
   })
+=======
+>>>>>>> origin/main
   @ApiNotFoundResponse({
     description: 'Сеанс не знайдено',
   })

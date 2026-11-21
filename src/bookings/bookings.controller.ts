@@ -7,7 +7,10 @@ import {
   HttpStatus,
   Param,
   Post,
+<<<<<<< HEAD
   ParseUUIDPipe,
+=======
+>>>>>>> origin/main
 } from '@nestjs/common';
 
 import {
@@ -40,6 +43,7 @@ export class BookingsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiNoContentResponse()
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID бронювання',
   })
@@ -49,6 +53,12 @@ export class BookingsController {
   remove(
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
+=======
+  @ApiNotFoundResponse({
+    description: 'Бронювання не знайдено',
+  })
+  remove(@Param('id') id: string): Promise<void> {
+>>>>>>> origin/main
     return this.bookingsService.remove(id);
   }
 }
@@ -63,7 +73,11 @@ export class ShowingBookingsController {
   @Post(':id/bookings')
   @ApiCreatedResponse({ type: Booking })
   @ApiBadRequestResponse({
+<<<<<<< HEAD
     description: 'Некоректний UUID або некоректні чи повторювані місця',
+=======
+    description: 'Некоректні або повторювані місця',
+>>>>>>> origin/main
   })
   @ApiNotFoundResponse({
     description: 'Сеанс не знайдено',
@@ -72,7 +86,11 @@ export class ShowingBookingsController {
     description: 'Місце вже заброньоване',
   })
   create(
+<<<<<<< HEAD
     @Param('id', new ParseUUIDPipe()) showingId: string,
+=======
+    @Param('id') showingId: string,
+>>>>>>> origin/main
     @Body() dto: CreateBookingDto,
   ): Promise<Booking> {
     return this.bookingsService.create(showingId, dto);
@@ -80,14 +98,21 @@ export class ShowingBookingsController {
 
   @Get(':id/bookings')
   @ApiOkResponse({ type: [Booking] })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID сеансу',
   })
+=======
+>>>>>>> origin/main
   @ApiNotFoundResponse({
     description: 'Сеанс не знайдено',
   })
   findByShowing(
+<<<<<<< HEAD
     @Param('id', new ParseUUIDPipe()) showingId: string,
+=======
+    @Param('id') showingId: string,
+>>>>>>> origin/main
   ): Promise<Booking[]> {
     return this.bookingsService.findByShowing(showingId);
   }
@@ -107,14 +132,21 @@ export class ShowingBookingsController {
       },
     },
   })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID сеансу',
   })
+=======
+>>>>>>> origin/main
   @ApiNotFoundResponse({
     description: 'Сеанс не знайдено',
   })
   getSeats(
+<<<<<<< HEAD
     @Param('id', new ParseUUIDPipe()) showingId: string,
+=======
+    @Param('id') showingId: string,
+>>>>>>> origin/main
   ): Promise<
     { row: number; seat: number; isBooked: boolean }[]
   > {

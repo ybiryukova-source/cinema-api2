@@ -7,7 +7,10 @@ import {
   Param,
   HttpCode,
   HttpStatus,
+<<<<<<< HEAD
   ParseUUIDPipe,
+=======
+>>>>>>> origin/main
 } from '@nestjs/common';
 
 import {
@@ -54,14 +57,21 @@ export class HallsController {
 
   @Get(':id')
   @ApiOkResponse({ type: HallWithSeats })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID залу',
   })
+=======
+>>>>>>> origin/main
   @ApiNotFoundResponse({
     description: 'Зал не знайдено',
   })
   findOne(
+<<<<<<< HEAD
     @Param('id', new ParseUUIDPipe()) id: string,
+=======
+    @Param('id') id: string,
+>>>>>>> origin/main
   ): Promise<HallWithSeats> {
     return this.hallsService.findOneWithSeats(id);
   }
@@ -71,18 +81,25 @@ export class HallsController {
   @ApiNoContentResponse({
     description: 'Зал успішно видалено',
   })
+<<<<<<< HEAD
   @ApiBadRequestResponse({
     description: 'Некоректний UUID залу',
   })
+=======
+>>>>>>> origin/main
   @ApiNotFoundResponse({
     description: 'Зал не знайдено',
   })
   @ApiConflictResponse({
     description: 'Зал використовується в сеансах',
   })
+<<<<<<< HEAD
   remove(
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
+=======
+  remove(@Param('id') id: string): Promise<void> {
+>>>>>>> origin/main
     return this.hallsService.remove(id);
   }
 }
