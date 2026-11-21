@@ -1,0 +1,401 @@
+@baseUrl = http://localhost:3000
+@missingId = 00000000-0000-4000-8000-000000000000
+
+### 1. Створити фільм
+# @name createFilm
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{
+  "title": "The Matrix",
+  "durationMinutes": 136,
+  "releaseYear": 1999
+}
+
+###
+@filmId = {{createFilm.response.body.$.id}}
+
+### 2. Отримати всі фільми
+GET {{baseUrl}}/films
+
+### 3. Отримати фільм за ID
+GET {{baseUrl}}/films/{{filmId}}
+
+### 4. Оновити фільм
+PATCH {{baseUrl}}/films/{{filmId}}
+Content-Type: application/json
+
+{
+  "title": "The Matrix Updated"
+}
+
+### 5. Створити зал
+# @name createHall
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Тестовий зал API",
+  "rows": 3,
+  "seatsPerRow": 5
+}
+
+###
+@hallId = {{createHall.response.body.$.id}}
+
+### 6. Отримати всі зали
+GET {{baseUrl}}/halls
+
+### 7. Отримати зал із місцями
+GET {{baseUrl}}/halls/{{hallId}}
+
+### 8. Створити сеанс
+# @name createShowing
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2030-12-20T18:00:00.000Z",
+  "price": 12500
+}
+
+###
+@showingId = {{createShowing.response.body.$.id}}
+
+### 9. Отримати всі сеанси
+GET {{baseUrl}}/showings
+
+### 10. Фільтрація за фільмом
+GET {{baseUrl}}/showings?filmId={{filmId}}
+
+### 11. Фільтрація за датою
+GET {{baseUrl}}/showings?date=2030-12-20
+
+### 12. Фільтрація за фільмом і датою
+GET {{baseUrl}}/showings?filmId={{filmId}}&date=2030-12-20
+
+### 13. Пагінація: перша сторінка
+GET {{baseUrl}}/showings?page=1&limit=2
+
+### 14. Пагінація: друга сторінка
+GET {{baseUrl}}/showings?page=2&limit=2
+
+### 15. Сортування за зростанням
+GET {{baseUrl}}/showings?sort=asc
+
+### 16. Сортування за спаданням
+GET {{baseUrl}}/showings?sort=desc
+
+### 17. Фільтрація, пагінація та сортування разом
+GET {{baseUrl}}/showings?filmId={{filmId}}&page=1&limit=10&sort=desc
+
+### 18. Отримати сеанс за ID
+GET {{baseUrl}}/showings/{{showingId}}
+
+### 19. Отримати місця сеансу
+GET {{baseUrl}}/showings/{{showingId}}/seats
+
+### 20. Створити бронювання
+# @name createBooking
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    {
+      "row": 1,
+      "seat": 2
+    },
+    {
+      "row": 1,
+      "seat": 3
+    }
+  ]
+}
+
+###
+@bookingId = {{createBooking.response.body.$.id}}
+
+### 21. Отримати всі бронювання
+GET {{baseUrl}}/bookings
+
+### 22. Отримати бронювання сеансу
+GET {{baseUrl}}/showings/{{showingId}}/bookings
+
+### 23. Отримати місця після бронювання
+GET {{baseUrl}}/showings/{{showingId}}/seats
+
+### 24. Помилка 409: повторне бронювання зайнятого місця
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    {
+      "row": 1,
+      "seat": 2
+    }
+  ]
+}
+
+### 25. Помилка 400: однакові місця в запиті
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    {
+      "row": 1,
+      "seat": 4
+    },
+    {
+      "row": 1,
+      "seat": 4
+    }
+  ]
+}
+
+### 26. Помилка 400: місце поза межами залу
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    {
+      "row": 100,
+      "seat": 1
+    }
+  ]
+}
+
+### 27. Помилка 400: порожній масив місць
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": []
+}
+
+### 28. Помилка 400: відсутній номер місця
+POST {{baseUrl}}/showings/{{showingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    {
+      "row": 1
+    }
+  ]
+}
+
+### 29. Помилка 404: бронювання неіснуючого сеансу
+POST {{baseUrl}}/showings/{{missingId}}/bookings
+Content-Type: application/json
+
+{
+  "seats": [
+    {
+      "row": 1,
+      "seat": 1
+    }
+  ]
+}
+
+### 30. Помилка 409: неможливо видалити фільм із сеансом
+DELETE {{baseUrl}}/films/{{filmId}}
+
+### 31. Помилка 409: неможливо видалити зал із сеансом
+DELETE {{baseUrl}}/halls/{{hallId}}
+
+### 32. Помилка 409: повторна назва залу
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Тестовий зал API",
+  "rows": 2,
+  "seatsPerRow": 4
+}
+
+### 33. Помилка 400: некоректні дані фільму
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{
+  "title": 123,
+  "durationMinutes": -5
+}
+
+### 34. Помилка 400: некоректне оновлення фільму
+PATCH {{baseUrl}}/films/{{filmId}}
+Content-Type: application/json
+
+{
+  "durationMinutes": "long"
+}
+
+### 35. Помилка 400: некоректні дані залу
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Некоректний зал",
+  "rows": 0,
+  "seatsPerRow": 2.5
+}
+
+### 36. Помилка 400: фільм не існує
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{missingId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2030-12-20T18:00:00.000Z",
+  "price": 12500
+}
+
+### 37. Помилка 400: зал не існує
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{missingId}}",
+  "startsAt": "2030-12-20T18:00:00.000Z",
+  "price": 12500
+}
+
+### 38. Помилка 400: дата сеансу в минулому
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2020-01-01T18:00:00.000Z",
+  "price": 12500
+}
+
+### 39. Помилка 400: некоректна ISO-дата
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "not-a-date",
+  "price": 12500
+}
+
+### 40. Помилка 400: від'ємна ціна
+POST {{baseUrl}}/showings
+Content-Type: application/json
+
+{
+  "filmId": "{{filmId}}",
+  "hallId": "{{hallId}}",
+  "startsAt": "2030-12-20T18:00:00.000Z",
+  "price": -100
+}
+
+### 41. Помилка 400: неправильний формат date
+GET {{baseUrl}}/showings?date=20-12-2030
+
+### 42. Помилка 400: page дорівнює нулю
+GET {{baseUrl}}/showings?page=0
+
+### 43. Помилка 400: від'ємна сторінка
+GET {{baseUrl}}/showings?page=-1
+
+### 44. Помилка 400: page не є числом
+GET {{baseUrl}}/showings?page=abc
+
+### 45. Помилка 400: limit дорівнює нулю
+GET {{baseUrl}}/showings?limit=0
+
+### 46. Помилка 400: limit перевищує 100
+GET {{baseUrl}}/showings?limit=101
+
+### 47. Помилка 400: дробовий limit
+GET {{baseUrl}}/showings?limit=2.5
+
+### 48. Помилка 400: неправильне сортування
+GET {{baseUrl}}/showings?sort=invalid
+
+### 49. Помилка 400: некоректний filmId
+GET {{baseUrl}}/showings?filmId=invalid-uuid
+
+### 50. Помилка 404: фільм не знайдено
+GET {{baseUrl}}/films/{{missingId}}
+
+### 51. Помилка 404: оновлення відсутнього фільму
+PATCH {{baseUrl}}/films/{{missingId}}
+Content-Type: application/json
+
+{
+  "title": "Missing"
+}
+
+### 52. Помилка 404: видалення відсутнього фільму
+DELETE {{baseUrl}}/films/{{missingId}}
+
+### 53. Помилка 404: зал не знайдено
+GET {{baseUrl}}/halls/{{missingId}}
+
+### 54. Помилка 404: видалення відсутнього залу
+DELETE {{baseUrl}}/halls/{{missingId}}
+
+### 55. Помилка 404: сеанс не знайдено
+GET {{baseUrl}}/showings/{{missingId}}
+
+### 56. Помилка 404: місця відсутнього сеансу
+GET {{baseUrl}}/showings/{{missingId}}/seats
+
+### 57. Помилка 404: бронювання відсутнього сеансу
+GET {{baseUrl}}/showings/{{missingId}}/bookings
+
+### 58. Скасувати бронювання
+DELETE {{baseUrl}}/bookings/{{bookingId}}
+
+### 59. Перевірити місця після скасування
+GET {{baseUrl}}/showings/{{showingId}}/seats
+
+### 60. Помилка 404: бронювання не знайдено
+DELETE {{baseUrl}}/bookings/{{missingId}}
+
+### 61. Створити фільм для видалення
+# @name createUnusedFilm
+POST {{baseUrl}}/films
+Content-Type: application/json
+
+{
+  "title": "Unused Film",
+  "durationMinutes": 100,
+  "releaseYear": 2025
+}
+
+###
+@unusedFilmId = {{createUnusedFilm.response.body.$.id}}
+
+### 62. Успішно видалити фільм без сеансів
+DELETE {{baseUrl}}/films/{{unusedFilmId}}
+
+### 63. Створити зал для видалення
+# @name createUnusedHall
+POST {{baseUrl}}/halls
+Content-Type: application/json
+
+{
+  "name": "Тимчасовий зал API",
+  "rows": 2,
+  "seatsPerRow": 3
+}
+
+###
+@unusedHallId = {{createUnusedHall.response.body.$.id}}
+
+### 64. Успішно видалити зал без сеансів
+DELETE {{baseUrl}}/halls/{{unusedHallId}}
